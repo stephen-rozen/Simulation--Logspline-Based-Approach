@@ -1,0 +1,16 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+**/converge_failures/
+**/mc_checkpoints/
+*rep_*
+*.rds
+!**/converge_failures/*.rds
+!Lognormal Monte Carlo Simulations/analysis/*.rds
+!Lognormal Monte Carlo Simulations/analysis/spline failures/*.rds
+*.png
+*.drawio
+*.drawio.bkp
+!/figures/*.rds
+

@@ -1,0 +1,791 @@
+---
+title: "run Full Analysis"
+output: html_document
+---
+```{r}
+library(tidyverse)
+```
+
+
+## INPUTS
+
+```{r}
+one_lod_grouper = list(
+                # c('censored1', 'censored2', 'censored3'),
+                # c('censored1', 'censored2'),
+                # 'avg_censored',
+                'censored',
+                'samp_size',
+                'GSD'
+              )
+  
+two_lod_grouper = list(
+                # c('censored1', 'censored2', 'censored3'),
+                c('censored1', 'censored2'),
+                'avg_censored',
+                # 'censored',
+                'samp_size',
+                'GSD'
+              )
+three_lod_grouper = list(
+                c('censored1', 'censored2', 'censored3'),
+                # c('censored1', 'censored2'),
+                'avg_censored',
+                # 'censored',
+                'samp_size',
+                'GSD'
+              )
+
+small_n <- list(
+    c(5:13),  # select non-spline iterates
+           c(14:19), # select spline-inclusive iterates
+    c(5:19) #all
+           )
+
+```
+
+## basic analysis wrapper function 
+
+```{r}
+if (!requireNamespace("rprojroot", quietly = TRUE)) install.packages("rprojroot")
+library(callr)
+
+# 1) Find the project root (dir that contains *.Rproj; falls back to git root if needed)
+root <- rprojroot::find_root(
+  rprojroot::has_file_pattern("\\.Rproj$") | rprojroot::is_git_root
+)
+
+# 2) Base dir where this script's MC files live
+mc_dir <- file.path(root, "Lognormal Monte Carlo Simulations")
+
+basic_analysis_clean <- function(rds_rel_path, analysis_grid) {
+  # absolute path for the RDS file
+  rds_abs <- normalizePath(file.path(mc_dir, rds_rel_path), winslash = "/", mustWork = TRUE)
+
+  # get the base name without .rds (this will be used for `name`)
+  name_arg <- tools::file_path_sans_ext(basename(rds_abs))
+
+  callr::r(
+    function(path, grid, nm) {
+      # load required packages
+      library(tidyverse)
+
+      # USER INPUT -- source the file Full_Analysis file
+      source("path_to_Full_Analysis.R")
+      # source(file.path(root, "Lognormal Monte Carlo Simulations", "Full_Analysis.R"))
+
+
+      # run the analysis
+      obj <- readRDS(path)
+      basic_analysis(obj, grid, name = nm)
+    },
+    args = list(path = rds_abs, grid = analysis_grid, nm = name_arg),
+    show = TRUE
+  )
+}
+```
+
+
+
+
+
+## Check Files paths exist
+```{r}
+# All RDS result files referenced in run Full Analysis
+rds_files <- list(
+
+  single = list(
+    small = c(
+      "single distribution/1lod/ln_ILOD_small_results.rds",
+      "single distribution/2lod/ln_IILOD_small_results.rds",
+      "single distribution/3lod/ln_IIILOD_small_results.rds"
+    ),
+    medium = c(
+      "single distribution/1lod/ln_ILOD_medium_results.rds",
+      "single distribution/2lod/ln_IILOD_medium_results.rds",
+      "single distribution/3lod/ln_IIILOD_medium_results.rds"
+    ),
+    large = c(
+      "single distribution/1lod/ln_ILOD_large_results.rds",
+      "single distribution/2lod/ln_IILOD_large_results.rds",
+      "single distribution/3lod/ln_IIILOD_large_results.rds"
+    )
+  ),
+
+  mixed = list(
+    small = c(
+      "mixed/1lod/IIln_ILOD_small_results.rds",
+      "mixed/2lod/IIln_IILOD_small_results.rds",
+      "mixed/3lod/IIln_IIILOD_small_results.rds"
+    ),
+    medium = c(
+      "mixed/1lod/IIln_ILOD_medium_results.rds",
+      "mixed/2lod/IIln_IILOD_medium_results.rds",
+      "mixed/3lod/IIln_IIILOD_medium_results.rds"
+    ),
+    large = c(
+      "mixed/1lod/IIln_ILOD_large_results.rds",
+      "mixed/2lod/IIln_IILOD_large_results.rds",
+      "mixed/3lod/IIln_IIILOD_large_results.rds"
+    )
+  ),
+
+  oscillating = list(
+    small = c(
+      "oscillating/1lod/sin_ILOD_small_results.rds",
+      "oscillating/2lod/sin_IILOD_small_results.rds",
+      "oscillating/3lod/sin_IIILOD_small_results.rds"
+    ),
+    medium = c(
+      "oscillating/1lod/sin_ILOD_medium_results.rds",
+      "oscillating/2lod/sin_IILOD_medium_results.rds",
+      "oscillating/3lod/sin_IIILOD_medium_results.rds"
+    ),
+    large = c(
+      "oscillating/1lod/sin_ILOD_large_results.rds",
+      "oscillating/2lod/sin_IILOD_large_results.rds",
+      "oscillating/3lod/sin_IIILOD_large_results.rds"
+    )
+  )
+)
+
+check_all_files <- function(paths, root = NULL) {
+  # root = base directory if your paths are relative
+  if (!is.null(root)) {
+    paths <- file.path(root, paths)
+  }
+  exists <- file.exists(paths)
+  data.frame(path = paths, exists = exists, stringsAsFactors = FALSE)
+}
+
+all_paths <- unlist(rds_files, use.names = FALSE)
+check_all_files(all_paths, root = mc_dir)
+```
+
+
+## small sample LN
+```{r}
+# p <- file.path("single distribution", "1lod", "ln_ILOD_small_results.rds")
+# try(basic_analysis_clean(p, small_analysis_grid), silent = F)
+# p <- file.path("single distribution", "2lod", "ln_IILOD_small_results.rds")
+# try(basic_analysis_clean(p, small_analysis_grid), silent = F)
+# p <- file.path("single distribution", "3lod", "ln_IIILOD_small_results.rds")
+# try(basic_analysis_clean(p, small_analysis_grid), silent = F)
+```
+
+
+#### basic analysis
+
+```{r}
+# #modify to your desired analysis
+# # Recommended that you stratify by sample size > 13 or < 14:
+# #   Spline method does not work for samples 13 or smaller
+small_analysis_grid <- expand_grid(
+  n = small_n,
+  grouper = list(
+                # c('censored1', 'censored2', 'censored3'),
+                # c('censored1', 'censored2'),
+                # 'avg_censored',
+                'censored',
+                'samp_size',
+                'GSD'
+              ),
+  stat_to_estimate = c(
+    'mean',
+    'sd',
+    'gm',
+    'gsd'
+    )
+)
+
+p <- file.path("single distribution", "1lod", "ln_ILOD_small_results.rds")
+try(basic_analysis_clean(p, small_analysis_grid), silent = F)
+
+small_analysis_grid <- expand_grid(
+ n = small_n,
+  grouper = list(
+                # c('censored1', 'censored2', 'censored3'),
+                c('censored1', 'censored2'),
+                'avg_censored',
+                # 'censored',
+                'samp_size',
+                'GSD'
+              ),
+  stat_to_estimate = c(
+    'mean',
+    'sd',
+    'gm',
+    'gsd'
+    )
+)
+
+p <- file.path("single distribution", "2lod", "ln_IILOD_small_results.rds")
+try(basic_analysis_clean(p, small_analysis_grid), silent = F)
+
+small_analysis_grid <- expand_grid(
+  n = small_n,
+  grouper = list(
+                c('censored1', 'censored2', 'censored3'),
+                # c('censored1', 'censored2'),
+                'avg_censored',
+                # 'censored',
+                'samp_size',
+                'GSD'
+              ),
+  stat_to_estimate = c(
+    'mean',
+    'sd',
+    'gm',
+    'gsd'
+    )
+)
+
+p <- file.path("single distribution", "3lod", "ln_IIILOD_small_results.rds")
+try(basic_analysis_clean(p, small_analysis_grid), silent = F)
+```
+
+
+
+
+## small sample mixed
+
+```{r}
+# p <- file.path("mixed", "1lod", "IIln_ILOD_small_results.rds")
+# try(basic_analysis_clean(p, small_analysis_grid), silent = F)
+# p <- file.path("mixed", "2lod", "IIln_IILOD_small_results.rds")
+# try(basic_analysis_clean(p, small_analysis_grid), silent = F)
+# p <- file.path("mixed", "3lod", "IIln_IIILOD_small_results.rds")
+# try(basic_analysis_clean(p, small_analysis_grid), silent = F)
+```
+
+
+#### basic analysis
+
+```{r}
+#modify to your desired analysis
+# Recommended that you stratify by sample size > 13 or < 14:
+#   Spline method does not work for samples 13 or smaller
+small_analysis_grid <- expand_grid(
+   n = small_n,  
+  grouper = list(
+                # c('censored1', 'censored2', 'censored3'),
+                # c('censored1', 'censored2'),
+                # 'avg_censored',
+                'censored',
+                'samp_size',
+                'GSD'
+              ),
+  stat_to_estimate = c(
+    'mean',
+    'sd',
+    'gm',
+    'gsd'
+    )
+)
+
+
+p <- file.path("mixed", "1lod", "IIln_ILOD_small_results.rds")
+try(basic_analysis_clean(p, small_analysis_grid), silent = F)
+
+
+
+small_analysis_grid <- expand_grid(
+  n = small_n, 
+  grouper = list(
+                # c('censored1', 'censored2', 'censored3'),
+                c('censored1', 'censored2'),
+                'avg_censored',
+                # 'censored',
+                'samp_size',
+                'GSD'
+              ),
+  stat_to_estimate = c(
+    'mean',
+    'sd',
+    'gm',
+    'gsd'
+    )
+)
+
+p <- file.path("mixed", "2lod", "IIln_IILOD_small_results.rds")
+try(basic_analysis_clean(p, small_analysis_grid), silent = F)
+
+
+
+small_analysis_grid <- expand_grid(
+  n = small_n, 
+  grouper = list(
+                c('censored1', 'censored2', 'censored3'),
+                # c('censored1', 'censored2'),
+                'avg_censored',
+                # 'censored',
+                'samp_size',
+                'GSD'
+              ),
+  stat_to_estimate = c(
+    'mean',
+    'sd',
+    'gm',
+    'gsd'
+    )
+)
+
+p <- file.path("mixed", "3lod", "IIln_IIILOD_small_results.rds")
+try(basic_analysis_clean(p, small_analysis_grid), silent = F)
+```
+
+## small sample sin
+```{r}
+# p <- file.path("oscillating", "1lod", "sin_ILOD_small_results.rds")
+# try(basic_analysis_clean(p, small_analysis_grid), silent = F)
+# p <- file.path("oscillating", "2lod", "sin_IILOD_small_results.rds")
+# try(basic_analysis_clean(p, small_analysis_grid), silent = F)
+# p <- file.path("oscillating", "3lod", "sin_IIILOD_small_results.rds")
+# try(basic_analysis_clean(p, small_analysis_grid), silent = F)
+```
+
+
+#### basic analysis
+
+```{r}
+#modify to your desired analysis
+# Recommended that you stratify by sample size > 13 or < 14:
+#   Spline method does not work for samples 13 or smaller
+small_analysis_grid <- expand_grid(
+  n = small_n,
+  grouper = list(
+                # c('censored1', 'censored2', 'censored3'),
+                # c('censored1', 'censored2'),
+                # 'avg_censored',
+                'censored',
+                'samp_size',
+                'GSD'
+              ),
+  stat_to_estimate = c(
+    'mean',
+    'sd',
+    'gm',
+    'gsd'
+    )
+)
+
+p <- file.path("oscillating", "1lod", "sin_ILOD_small_results.rds")
+try(basic_analysis_clean(p, small_analysis_grid), silent = F)
+
+
+small_analysis_grid <- expand_grid(
+  n = small_n, 
+  grouper = list(
+                # c('censored1', 'censored2', 'censored3'),
+                c('censored1', 'censored2'),
+                'avg_censored',
+                # 'censored',
+                'samp_size',
+                'GSD'
+              ),
+  stat_to_estimate = c(
+    'mean',
+    'sd',
+    'gm',
+    'gsd'
+    )
+)
+p <- file.path("oscillating", "2lod", "sin_IILOD_small_results.rds")
+try(basic_analysis_clean(p, small_analysis_grid), silent = F)
+
+
+small_analysis_grid <- expand_grid(
+  n = small_n, 
+  grouper = list(
+                c('censored1', 'censored2', 'censored3'),
+                # c('censored1', 'censored2'),
+                'avg_censored',
+                # 'censored',
+                'samp_size',
+                'GSD'
+              ),
+  stat_to_estimate = c(
+    'mean',
+    'sd',
+    'gm',
+    'gsd'
+    )
+)
+p <- file.path("oscillating", "3lod", "sin_IIILOD_small_results.rds")
+try(basic_analysis_clean(p, small_analysis_grid), silent = F)
+```
+
+
+
+
+## medium sample LN
+```{r}
+# p <- file.path("single distribution", "1lod", "ln_ILOD_medium_results.rds")
+# try(basic_analysis_clean(p, med_analysis_grid), silent = F)
+# p <- file.path("single distribution", "2lod", "ln_IILOD_medium_results.rds")
+# try(basic_analysis_clean(p, med_analysis_grid), silent = F)
+# p <- file.path("single distribution", "3lod", "ln_IIILOD_medium_results.rds")
+# try(basic_analysis_clean(p, med_analysis_grid), silent = F)
+```
+
+
+#### basic analysis
+```{r}
+# 
+med_analysis_grid <- expand_grid(
+  n = list(seq(20, 90, 10)),
+  grouper = one_lod_grouper,
+  # stat_to_estimate = c('gm')
+  stat_to_estimate = c('mean', 'sd', 'gm', 'gsd')
+)
+
+p <- file.path("single distribution", "1lod", "ln_ILOD_medium_results.rds")
+try(basic_analysis_clean(p, med_analysis_grid), silent = F)
+# 
+# 
+# 
+# #modify to your desired analysis
+med_analysis_grid <- expand_grid(
+  n = list(seq(20, 90, 10)),
+  grouper = list(
+    # c('censored1', 'censored2', 'censored3'),
+                c('censored1', 'censored2'),
+                'avg_censored',
+                # 'censored',
+                'samp_size',
+                'GSD'
+              ),
+  # stat_to_estimate = c('gm')
+  stat_to_estimate = c('mean', 'sd', 'gm', 'gsd')
+)
+
+p <- file.path("single distribution", "2lod", "ln_IILOD_medium_results.rds")
+try(basic_analysis_clean(p, med_analysis_grid), silent = F)
+# 
+# 
+# 
+# 
+# 
+# #modify to your desired analysis
+med_analysis_grid <- expand_grid(
+  n = list(seq(20, 90, 10)),
+  grouper = list(
+    c('censored1', 'censored2', 'censored3'),
+    #             c('censored1', 'censored2'),
+                'avg_censored',
+                # 'censored',
+                'samp_size',
+                'GSD'
+              ),
+  # stat_to_estimate = c('gm')
+  stat_to_estimate = c('mean', 'sd', 'gm', 'gsd')
+)
+
+
+p <- file.path("single distribution", "3lod", "ln_IIILOD_medium_results.rds")
+try(basic_analysis_clean(p, med_analysis_grid), silent = F)
+```
+
+## medium sample mix
+```{r}
+# p <- file.path("mixed", "1lod", "IIln_ILOD_medium_results.rds")
+# try(basic_analysis_clean(p, med_analysis_grid), silent = F)
+# p <- file.path("mixed", "2lod", "IIln_IILOD_medium_results.rds")
+# try(basic_analysis_clean(p, med_analysis_grid), silent = F)
+# p <- file.path("mixed", "3lod", "IIln_IIILOD_medium_results.rds")
+# try(basic_analysis_clean(p, med_analysis_grid), silent = F)
+```
+
+
+#### basic analysis
+```{r}
+
+med_analysis_grid <- expand_grid(
+  n = list(seq(20, 90, 10)),
+  grouper = one_lod_grouper,
+  # stat_to_estimate = c('gm')
+  stat_to_estimate = c('mean', 'sd', 'gm', 'gsd')
+)
+
+p <- file.path("mixed", "1lod", "IIln_ILOD_medium_results.rds")
+try(basic_analysis_clean(p, med_analysis_grid), silent = F)
+# 
+# 
+# 
+# #modify to your desired analysis
+med_analysis_grid <- expand_grid(
+  n = list(seq(20, 90, 10)),
+  grouper = list(
+    # c('censored1', 'censored2', 'censored3'),
+                c('censored1', 'censored2'),
+                'avg_censored',
+                # 'censored',
+                'samp_size',
+                'GSD'
+              ),
+  # stat_to_estimate = c('gm')
+  stat_to_estimate = c('mean', 'sd', 'gm', 'gsd')
+)
+
+p <- file.path("mixed", "2lod", "IIln_IILOD_medium_results.rds")
+try(basic_analysis_clean(p, med_analysis_grid), silent = F)
+
+
+#modify to your desired analysis
+med_analysis_grid <- expand_grid(
+  n = list(seq(20, 90, 10)),
+  grouper = list(
+    c('censored1', 'censored2', 'censored3'),
+    #             c('censored1', 'censored2'),
+                'avg_censored',
+                # 'censored',
+                'samp_size',
+                'GSD'
+              ),
+  # stat_to_estimate = c('gm')
+  stat_to_estimate = c('mean', 'sd', 'gm', 'gsd')
+)
+
+
+p <- file.path("mixed", "3lod", "IIln_IIILOD_medium_results.rds")
+try(basic_analysis_clean(p, med_analysis_grid), silent = F)
+```
+
+
+## medium sample sin
+```{r}
+# p <- file.path("oscillating", "1lod", "sin_ILOD_medium_results.rds")
+# try(basic_analysis_clean(p, med_analysis_grid), silent = F)
+# p <- file.path("oscillating", "2lod", "sin_IILOD_medium_results.rds")
+# try(basic_analysis_clean(p, med_analysis_grid), silent = F)
+# p <- file.path("oscillating", "3lod", "sin_IIILOD_medium_results.rds")
+# try(basic_analysis_clean(p, med_analysis_grid), silent = F)
+```
+
+
+#### basic analysis
+```{r}
+
+med_analysis_grid <- expand_grid(
+  n = list(seq(20, 90, 10)),
+  grouper = one_lod_grouper,
+  # stat_to_estimate = c('gm')
+  stat_to_estimate = c('mean', 'sd', 'gm', 'gsd')
+)
+
+p <- file.path("oscillating", "1lod", "sin_ILOD_medium_results.rds")
+try(basic_analysis_clean(p, med_analysis_grid), silent = F)
+
+
+
+#modify to your desired analysis
+med_analysis_grid <- expand_grid(
+  n = list(seq(20, 90, 10)),
+  grouper = list(
+    # c('censored1', 'censored2', 'censored3'),
+                c('censored1', 'censored2'),
+                'avg_censored',
+                # 'censored',
+                'samp_size',
+                'GSD'
+              ),
+  # stat_to_estimate = c('gm')
+  stat_to_estimate = c('mean', 'sd', 'gm', 'gsd')
+)
+
+p <- file.path("oscillating", "2lod", "sin_IILOD_medium_results.rds")
+try(basic_analysis_clean(p, med_analysis_grid), silent = F)
+
+
+#modify to your desired analysis
+med_analysis_grid <- expand_grid(
+  n = list(seq(20, 90, 10)),
+  grouper = list(
+    c('censored1', 'censored2', 'censored3'),
+    #             c('censored1', 'censored2'),
+                'avg_censored',
+                # 'censored',
+                'samp_size',
+                'GSD'
+              ),
+  # stat_to_estimate = c('gm')
+  stat_to_estimate = c('mean', 'sd', 'gm', 'gsd')
+)
+
+
+p <- file.path("oscillating", "3lod", "sin_IIILOD_medium_results.rds")
+try(basic_analysis_clean(p, med_analysis_grid), silent = F)
+```
+
+## large sample LN
+```{r}
+# p <- file.path("single distribution", "1lod", "ln_ILOD_large_results.rds")
+# try(basic_analysis_clean(p, large_analysis_grid), silent = F)
+# p <- file.path("single distribution", "2lod", "ln_IILOD_large_results.rds")
+# try(basic_analysis_clean(p, large_analysis_grid), silent = F)
+# p <- file.path("single distribution", "3lod", "ln_IIILOD_large_results.rds")
+# try(basic_analysis_clean(p, large_analysis_grid), silent = F)
+```
+
+
+#### basic analysis
+```{r}
+
+#modify to your desired analysis
+
+large_analysis_grid <- expand_grid(
+  n = list(seq(100, 500, 100)),
+  grouper = list(
+              # c('censored1', 'censored2', 'censored3'),
+              #   c('censored1', 'censored2'),
+              #   'avg_censored',
+                'censored',
+                'samp_size',
+                'GSD'
+              ),
+  # stat_to_estimate = c('gm', 'sd')
+  stat_to_estimate = c('mean', 'sd', 'gm', 'gsd')
+)
+
+p <- file.path("single distribution", "1lod", "ln_ILOD_large_results.rds")
+try(basic_analysis_clean(p, large_analysis_grid), silent = F)
+
+
+large_analysis_grid <- expand_grid(
+  n = list(seq(100, 500, 100)),
+  grouper = two_lod_grouper,
+  # stat_to_estimate = c('gm', 'sd')
+  stat_to_estimate = c('mean', 'sd', 'gm', 'gsd')
+)
+p <- file.path("single distribution", "2lod", "ln_IILOD_large_results.rds")
+try(basic_analysis_clean(p, large_analysis_grid), silent = F)
+
+
+large_analysis_grid <- expand_grid(
+  n = list(seq(100, 500, 100)),
+  grouper = three_lod_grouper,
+  # stat_to_estimate = c('gm', 'sd')
+  stat_to_estimate = c('mean', 'sd', 'gm', 'gsd')
+)
+
+p <- file.path("single distribution", "3lod", "ln_IIILOD_large_results.rds")
+try(basic_analysis_clean(p, large_analysis_grid), silent = F)
+
+
+```
+
+## large sample mix
+```{r}
+# p <- file.path("mixed", "1lod", "IIln_ILOD_large_results.rds")
+# try(basic_analysis_clean(p, large_analysis_grid), silent = F)
+# p <- file.path("mixed", "2lod", "IIln_IILOD_large_results.rds")
+# try(basic_analysis_clean(p, large_analysis_grid), silent = F)
+# p <- file.path("mixed", "3lod", "IIln_IIILOD_large_results.rds")
+# try(basic_analysis_clean(p, large_analysis_grid), silent = F)
+```
+
+#### basic analysis
+```{r}
+
+#modify to your desired analysis
+
+large_analysis_grid <- expand_grid(
+  n = list(seq(100, 500, 100)),
+  grouper = list(
+              # c('censored1', 'censored2', 'censored3'),
+              #   c('censored1', 'censored2'),
+              #   'avg_censored',
+                'censored',
+                'samp_size',
+                'GSD'
+              ),
+  # stat_to_estimate = c('gm', 'sd')
+  stat_to_estimate = c('mean', 'sd', 'gm', 'gsd')
+)
+
+p <- file.path("mixed", "1lod", "IIln_ILOD_large_results.rds")
+try(basic_analysis_clean(p, large_analysis_grid), silent = F)
+
+
+large_analysis_grid <- expand_grid(
+  n = list(seq(100, 500, 100)),
+  grouper = two_lod_grouper,
+  # stat_to_estimate = c('gm', 'sd')
+  stat_to_estimate = c('mean', 'sd', 'gm', 'gsd')
+)
+
+p <- file.path("mixed", "2lod", "IIln_IILOD_large_results.rds")
+try(basic_analysis_clean(p, large_analysis_grid), silent = F)
+
+
+large_analysis_grid <- expand_grid(
+  n = list(seq(100, 500, 100)),
+  grouper = three_lod_grouper,
+  # stat_to_estimate = c('gm', 'sd')
+  stat_to_estimate = c('mean', 'sd', 'gm', 'gsd')
+)
+
+p <- file.path("mixed", "3lod", "IIln_IIILOD_large_results.rds")
+try(basic_analysis_clean(p, large_analysis_grid), silent = F)
+
+
+```
+
+## large sample sin
+
+```{r}
+# p <- file.path("oscillating", "1lod", "sin_ILOD_large_results.rds")
+# try(basic_analysis_clean(p, large_analysis_grid), silent = F)
+# p <- file.path("oscillating", "2lod", "sin_IILOD_large_results.rds")
+# try(basic_analysis_clean(p, large_analysis_grid), silent = F)
+# p <- file.path("oscillating", "3lod", "sin_IIILOD_large_results.rds")
+# try(basic_analysis_clean(p, large_analysis_grid), silent = F)
+```
+
+
+#### basic analysis
+```{r}
+
+#modify to your desired analysis
+
+large_analysis_grid <- expand_grid(
+  n = list(seq(100, 500, 100)),
+  grouper = list(
+              # c('censored1', 'censored2', 'censored3'),
+              #   c('censored1', 'censored2'),
+              #   'avg_censored',
+                'censored',
+                'samp_size',
+                'GSD'
+              ),
+  # stat_to_estimate = c('gm', 'sd')
+  stat_to_estimate = c('mean', 'sd', 'gm', 'gsd')
+)
+#call the auto analysis 
+p <- file.path("oscillating", "1lod", "sin_ILOD_large_results.rds")
+try(basic_analysis_clean(p, large_analysis_grid), silent = F)
+
+
+large_analysis_grid <- expand_grid(
+  n = list(seq(100, 500, 100)),
+  grouper = two_lod_grouper,
+  # stat_to_estimate = c('gm', 'sd')
+  stat_to_estimate = c('mean', 'sd', 'gm', 'gsd')
+)
+#call the auto analysis 
+p <- file.path("oscillating", "2lod", "sin_IILOD_large_results.rds")
+try(basic_analysis_clean(p, large_analysis_grid), silent = F)
+
+
+large_analysis_grid <- expand_grid(
+  n = list(seq(100, 500, 100)),
+  grouper = three_lod_grouper,
+  # stat_to_estimate = c('gm', 'sd')
+  stat_to_estimate = c('mean', 'sd', 'gm', 'gsd')
+)
+
+p <- file.path("oscillating", "3lod", "sin_IIILOD_large_results.rds")
+try(basic_analysis_clean(p, large_analysis_grid), silent = F)
+
+
+```
